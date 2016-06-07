@@ -7,7 +7,8 @@
 %% RAFT FSM states
 -export([follower/3, candidate/3, leader/3]).
 
--callback commit(Command) -> {ok, State} | error.
+%-callback commit(Command) -> {ok, State} | error.
+% TODO: test if it is possible to extend the behaviour.
 
 -record(state, {current_term=0, % (persistent)
                 voted_for=none, % (persistent)
@@ -22,10 +23,10 @@
 
 %% API functions
 
-start(ProcessName, OtherNodes) ->
-    gen_statem:start({local, ProcessName}, 
+start(NodeName, ClusterConfig) ->
+    gen_statem:start({local, NodeName}, 
                      ?MODULE,
-                     OtherNodes,
+                     #{cluster_config => ClusterConfig},
                      []).
 
 stop(ProcessName) ->
@@ -42,8 +43,12 @@ leader(_EventType, _EventContent, _Data) ->
 
 %% Behaviour callbacks
 
-init(OtherNodes) ->
-    {state_functions, follower, #state{other_nodes=OtherNodes}}.
+init(#{cluster_config := []} = Options) ->
+    {stop, cluster_configuration_error};
+init(#{cluster_config := ClusterConfig} = Options) when (erlang:length(ClusterConfig)) rem 2 == 1 ->
+    {stop, cluster_configuration_error};
+init(#{cluster_config := ClusterConfig} = Options) ->
+    {state_functions, follower, #{cluster_config => ClusterConfig}}.
 
 handle_event(_EventType, _EventContent, _State, _Data) ->
     keep_state_and_data.
