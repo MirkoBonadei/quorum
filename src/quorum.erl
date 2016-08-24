@@ -7,22 +7,7 @@
 %% RAFT FSM states
 -export([follower/3, candidate/3, leader/3]).
 
-%-callback commit(Command) -> {ok, State} | error.
-% TODO: test if it is possible to extend the behaviour.
-
--record(state, {current_term=0, % (persistent)
-                voted_for=none, % (persistent)
-                log=[], % (persistent) remember that the first index must be 1
-                other_nodes=[],
-                commit_index=0,
-                last_applied=0,
-                next_index=[], % (only for the leader)
-                match_index=[] % (only for the leader)
-               }
-       ).
-
 %% API functions
-
 start(NodeName, ClusterConfig) ->
     gen_statem:start({local, NodeName}, 
                      ?MODULE,
@@ -48,7 +33,12 @@ init(#{cluster_config := []} = Options) ->
 init(#{cluster_config := ClusterConfig} = Options) when (erlang:length(ClusterConfig)) rem 2 == 1 ->
     {stop, cluster_configuration_error};
 init(#{cluster_config := ClusterConfig} = Options) ->
-    {state_functions, follower, #{cluster_config => ClusterConfig}}.
+    State = #{cluster_config => ClusterConfig,
+              voted_for => none,
+              current_term => 0,
+              log => [],
+              storage_path => volatile},
+    {state_functions, follower, State}.
 
 handle_event(_EventType, _EventContent, _State, _Data) ->
     keep_state_and_data.
