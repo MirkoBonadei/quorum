@@ -55,3 +55,9 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 
 terminate(_Reason, _State, _Data) ->
     ignored.
+
+-ifdef(TEST).
+
+-include_lib("eunit/include/eunit.hrl").
+
+-endif.
