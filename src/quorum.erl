@@ -8,10 +8,10 @@
 -export([follower/3, candidate/3, leader/3]).
 
 %% API functions
-start(NodeName, ClusterConfig) ->
+start(NodeName, Options) ->
     gen_statem:start({local, NodeName}, 
                      ?MODULE,
-                     #{cluster_config => ClusterConfig},
+                     Options,
                      []).
 
 stop(ProcessName) ->
@@ -33,11 +33,18 @@ init(#{cluster_config := []} = Options) ->
 init(#{cluster_config := ClusterConfig} = Options) when (erlang:length(ClusterConfig)) rem 2 == 1 ->
     {stop, cluster_configuration_error};
 init(#{cluster_config := ClusterConfig} = Options) ->
-    State = #{cluster_config => ClusterConfig,
-              voted_for => none,
-              current_term => 0,
-              log => [],
-              storage_path => volatile},
+    DefaultState = #{cluster_config => ClusterConfig,
+                     voted_for => none,
+                     current_term => 0,
+                     log => [],
+                     storage_path => volatile},
+    State = case maps:find(storage_path, Options) of
+                error ->
+                    DefaultState;
+                {ok, StoragePath} ->
+                    maps:update(storage_path, StoragePath, DefaultState)
+                    % Load previous state if present or save current
+            end,
     {state_functions, follower, State}.
 
 handle_event(_EventType, _EventContent, _State, _Data) ->
