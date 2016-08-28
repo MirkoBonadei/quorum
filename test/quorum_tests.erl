@@ -11,22 +11,16 @@ starting_with_an_even_number_of_nodes_results_in_error_test() ->
 
 starting_with_an_odd_number_and_without_presistent_storage_test() ->
     ClusterConfig = [second_node, third_node],
-    ExpectedState = #{cluster_config => ClusterConfig,
-                      current_term => 0,
-                      voted_for => none,
-                      log => none,
-                      storage_path => volatile},
-    Options = #{cluster_config => ClusterConfig},
-    ?assertEqual({state_functions, follower, ExpectedState}, quorum:init(Options)).
+    OneMinute = 60000, %% really high for testing purposes
+    Options = #{cluster_config => ClusterConfig, 
+                timeout_after => OneMinute},
+    {state_functions, follower, State} = quorum:init(Options),
+    ?assertEqual(ClusterConfig, maps:get(cluster_config, State)),
+    ?assertEqual(0, maps:get(current_term, State)),
+    ?assertEqual(none, maps:get(voted_for, State)),
+    ?assertEqual(none, maps:get(log, State)),
+    ?assertEqual(volatile, maps:get(storage_path, State)),
+    ?assert(erlang:is_reference(maps:get(current_timer, State))).
 
-%% TODO: skipped test
-starting_with_an_odd_number_and_with_persistent_storage_tes() ->
-    ClusterConfig = [second_node, third_node],
-    ExpectedState = #{cluster_config => ClusterConfig,
-                      current_term => 0,
-                      voted_for => none,
-                      log => [],
-                      storage_path => '/tmp'},
-    Options = #{cluster_config => ClusterConfig, storage_path => '/tmp'},
-    ?assertEqual({state_functions, follower, ExpectedState}, quorum:init(Options)).
+
     

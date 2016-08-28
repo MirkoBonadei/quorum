@@ -9,13 +9,12 @@
 
 -define(META_FILE_NAME, "/meta").
 -define(LOG_FILE_NAME, "/log").
+-define(LOWER_TIMEOUT_MS, 150).
+-define(HIGHER_TIMEOUT_MS, 300).
 
 %% API functions
 start(NodeName, Options) ->
-    gen_statem:start({local, NodeName}, 
-                     ?MODULE,
-                     Options,
-                     []).
+    gen_statem:start({local, NodeName}, ?MODULE, Options, []).
 
 stop(ProcessName) ->
     gen_statem:stop(ProcessName).
@@ -37,7 +36,8 @@ init(#{cluster_config := ClusterConfig} = _Options) when (erlang:length(ClusterC
     {stop, cluster_configuration_error};
 init(Options) ->
     State = initialize_state(Options),
-    {state_functions, follower, State}.
+    TRef = initialize_follower_timer(Options),
+    {state_functions, follower, maps:put(current_timer => TRef, State)}.
 
 handle_event(_EventType, _EventContent, _State, _Data) ->
     keep_state_and_data.
@@ -47,6 +47,16 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 
 terminate(_Reason, _State, _Data) ->
     ignored.
+
+initialize_follower_timer(Options) ->
+    Timeout = case maps:get(timeout_after, Options) of
+                  {badkey, _Key} -> randomized_timeout();
+                  ConfTimeout -> ConfTimeout
+              end,
+    timer:send_after(Timeout, {timeout, follower_timeout}).
+
+randomized_timeout() ->
+    
 
 initialize_state(Options) ->
     DefaultState = #{cluster_config => maps:get(cluster_config, Options),
