@@ -37,7 +37,7 @@ init(#{cluster_config := ClusterConfig} = _Options) when (erlang:length(ClusterC
 init(Options) ->
     State = initialize_state(Options),
     TRef = initialize_follower_timer(Options),
-    {state_functions, follower, maps:put(current_timer => TRef, State)}.
+    {state_functions, follower, maps:put(current_timer, TRef, State)}.
 
 handle_event(_EventType, _EventContent, _State, _Data) ->
     keep_state_and_data.
@@ -53,10 +53,11 @@ initialize_follower_timer(Options) ->
                   {badkey, _Key} -> randomized_timeout();
                   ConfTimeout -> ConfTimeout
               end,
-    timer:send_after(Timeout, {timeout, follower_timeout}).
+    {ok, {_, TRef}} = timer:send_after(Timeout, {timeout, follower_timeout}),
+    TRef.
 
 randomized_timeout() ->
-    
+    170. %% TODO: return a random number between LOWER_TIMEOUT_MS and HIGHER_TIMEOUT_MS
 
 initialize_state(Options) ->
     DefaultState = #{cluster_config => maps:get(cluster_config, Options),
