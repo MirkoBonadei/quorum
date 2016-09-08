@@ -20,7 +20,8 @@ starting_with_an_odd_number_and_without_presistent_storage_test() ->
     ?assertEqual(none, maps:get(voted_for, State)),
     ?assertEqual(none, maps:get(log, State)),
     ?assertEqual(volatile, maps:get(storage_path, State)),
-    ?assert(erlang:is_reference(maps:get(current_timer, State))).
+    ?assert(erlang:is_reference(maps:get(current_timer, State))),
+    timer:cancel(maps:get(current_timer, State)).
 
 
     
